@@ -1,0 +1,230 @@
+package spring.lifecycle.entity;
+
+import java.util.Date;
+
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.BeanClassLoaderAware;
+import org.springframework.beans.factory.BeanNameAware;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+
+//use of BeanNameAware(sets name of bean in beanfactory),ApplicationContextAware(sets date),BeanClassLoaderAware(sets classloader to bean instance)
+
+public class Address implements BeanNameAware, ApplicationContextAware, BeanClassLoaderAware {
+		
+
+		private String city;
+		private String pinCode;
+		
+		public Address() {
+			
+		}
+		
+		public Address(String city,String pinCode) {
+			super();
+			this.city = city;
+			this.pinCode = pinCode;
+		}
+		
+		public String getCity() {
+			return city;
+			
+		}
+
+		public String getPinCode() {
+			return pinCode;
+		}
+
+		public void setPinCode(String pinCode) {
+			this.pinCode = pinCode;
+		}
+
+		public void setCity(String city) {
+			this.city = city;
+		}
+		
+		@Override
+		public String toString() {
+			return "Address [city=" + city + ", pinCode=" + pinCode + "]";
+		}
+
+		public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+			System.out.println("setApplicationContext ...");
+			System.out.println(new Date(applicationContext.getStartupDate()));
+		}	
+
+		public void setBeanName(String name) {
+			System.out.println("setBeanName: "+name);
+			
+		}
+
+		public void setBeanClassLoader(ClassLoader classLoader) {
+			System.out.println("setClassLoader: "+classLoader);
+			
+		}
+
+}	
+
+-------------------------------------------------------------------------------------------------------
+
+
+package spring.lifecycle.entity;
+
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.config.BeanPostProcessor;
+
+public class MyBeanPostProcessor implements BeanPostProcessor{
+	
+	  public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+		System.out.println("postProcessAfterInitialization called.....bean: "+bean+"    beanName="+beanName);
+		if(bean instanceof Address) {
+			Address address = (Address)bean;
+			address.setCity(address.getCity());
+		}
+		return bean;
+	}
+	
+	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+		System.out.println("postProcessBeforeInitialization called.....bean: "+bean+"    beanName="+beanName);
+		return bean;
+	} 
+	
+
+}
+
+---------------------------------------------------------------------------------------
+package spring.lifecycle.entity;
+
+import org.springframework.beans.factory.DisposableBean;
+import org.springframework.beans.factory.InitializingBean;
+
+
+
+// InitializingBean , DisposableBean through interface
+
+
+
+public class SampleBean implements InitializingBean , DisposableBean {
+	
+	private int id ;
+	private String name ;
+	
+	
+	private Address address ;
+	
+	public SampleBean() {
+		super();
+		System.out.println("Constructor is created :");
+		// TODO Auto-generated constructor stub
+	}
+
+	
+	public SampleBean(int id, String name) {
+		super();
+		this.id = id;
+		this.name = name;
+	}
+	
+	
+	
+	
+	
+	public SampleBean(int id, String name, Address address) {
+		
+		this.id = id;
+		this.name = name;
+		this.address = address;
+	}
+
+	
+	
+	@Override
+	public String toString() {
+		return "SampleBean [id=" + id + ", name=" + name + ", address=" + address + "]";
+	}
+
+
+	public void destroy() throws Exception {
+		
+		System.out.println("method is destroyed : ");
+		
+	}
+
+
+	public void afterPropertiesSet() throws Exception {
+		
+		System.out.println("method is created : ");
+		
+	}
+
+
+
+-----------------------------------------------------------------------------------------------
+package spring.lifecycle.main;
+
+import org.springframework.context.ConfigurableApplicationContext;
+//import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.AbstractApplicationContext;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
+
+import spring.lifecycle.entity.SampleBean;
+
+public class Main {
+
+	public static void main(String[] args) {
+		
+		
+		AbstractApplicationContext context =new ClassPathXmlApplicationContext("config.xml");
+		SampleBean samplebean = (SampleBean) context.getBean("samplebean");
+		System.out.println(samplebean);
+		//context.registerShutdownHook();		//registerShutdownHook() sequence doesnt matter . called at last during destroy
+		
+		SampleBean samplebean1 = (SampleBean) context.getBean("samplebean1");
+		System.out.println(samplebean1);
+		
+		
+		SampleBean samplebean2 = (SampleBean) context.getBean("samplebean2");
+		System.out.println(samplebean2);
+		((ConfigurableApplicationContext)context).close();		//sequence matters otherwise error refresh beanfactory or beanfactory closed
+	}
+
+}
+---------------------------------------------------------------------------------------------------
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="
+        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
+        http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd">
+ 
+ 
+        
+  <bean name = "samplebean"  class="spring.lifecycle.entity.SampleBean">
+ 	<constructor-arg value = "1" />
+ 	<constructor-arg value = "Eshika" />
+ </bean>       
+
+<bean name = "samplebean1"  class="spring.lifecycle.entity.SampleBean"  lazy-init = "true">
+ 	<constructor-arg value = "2" />
+ 	<constructor-arg value = "Rohan" type = "String" />
+ 	<constructor-arg ref = "address" />
+ </bean>   
+ 
+ <bean name = "samplebean2"  class="spring.lifecycle.entity.SampleBean">
+ 	<constructor-arg value = "3" />
+ 	<constructor-arg value = "Eshaan" />
+ </bean>   
+ 
+ <bean name = "address"  class="spring.lifecycle.entity.Address">
+ 	<constructor-arg value = "Mumbai" />
+ 	<constructor-arg value = "401107" />
+ </bean>      
+    
+  <bean class="spring.lifecycle.entity.MyBeanPostProcessor" />
+ 
+
+</beans>        
